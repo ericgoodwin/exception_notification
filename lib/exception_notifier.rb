@@ -50,7 +50,7 @@ class ExceptionNotifier
     unless ignored_exception(options[:ignore_exceptions], exception)       ||
            from_crawler(options[:ignore_crawlers], env['HTTP_USER_AGENT']) ||
            conditionally_ignored(options[:ignore_if], env, exception) ||
-           throttle(exception, options[:throttle_seconds])
+           throttle(options[:throttle_seconds], env, exception)
       Notifier.exception_notification(env, exception).deliver
       @campfire.exception_notification(exception)
       env['exception_notifier.delivered'] = true
@@ -61,10 +61,11 @@ class ExceptionNotifier
 
   private
 
-  def throttle(exception, seconds)
+  def throttle(seconds, env, exception)
     if (seconds = seconds.to_i) > 0
       raise ArgumentError.new("You must be using memcache to use throttling") unless Rails.cache.is_a?(ActiveSupport::Cache::DalliStore) || Rails.cache.is_a?(ActiveSupport::Cache::MemCacheStore)
-      key = "exception-notifier-#{ Digest::SHA1.hexdigest(exception.backtrace.join) }"
+      key = "exception-notifier-#{ Digest::SHA1.hexdigest(exception.to_s) }"
+      Rails.logger.debug "exception-notifier throttle key #{ key }"
       return Rails.cache.exist?(key).tap do |exist|
         Rails.cache.write(key, '1', :expires_in => seconds.seconds) unless exist 
       end
