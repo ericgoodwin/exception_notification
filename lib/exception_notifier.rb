@@ -63,7 +63,7 @@ class ExceptionNotifier
 
   def throttle(exception, seconds)
     if (seconds = seconds.to_i) > 0
-      raise ArgumentError.new("You must be using memcache to use throttling") unless Rails.cache.is_a?(ActiveSupport::Cache::DalliStore) || Rails.cache.is_a?(ActiveSupport::Cache::MemCacheStore)
+      raise ArgumentError.new("You must be using dalli memcache to use throttling") unless ActiveSupport::Cache.const_defined?('DalliStore')
       key = "exception-notifier-#{ Digest::SHA1.hexdigest(exception.backtrace.join) }"
       return Rails.cache.exist?(key).tap do |exist|
         Rails.cache.write(key, '1', :expires_in => seconds.seconds) unless exist 
